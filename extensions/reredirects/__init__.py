@@ -14,7 +14,7 @@ from sphinx.util import logging
 from sphinx.util.console import bold, colorize, term_width_line  # type: ignore
 
 OPTION_REDIRECTS = "redirects"
-OPTION_REDIRECTS_DEFAULT: Dict[str, str] = dict()
+OPTION_REDIRECTS_DEFAULT: Dict[str, str] = {}
 OPTION_TEMPLATE_FILE = "redirect_html_template_file"
 OPTION_TEMPLATE_FILE_DEFAULT = None
 REDIRECT_FILE_DEFAULT_TEMPLATE = '<html><head><meta http-equiv="refresh" content="0; url=${to_uri}"></head></html>'  # noqa: E501
@@ -59,7 +59,7 @@ def write_redirect_pages(app: Sphinx) -> List[Tuple[str, Dict[str, Any], str]]:
     """
     if not app.config[OPTION_REDIRECTS]:
         logger.debug('No redirects configured')
-        return list()
+        return []
 
     rr = Reredirects(app)
     to_be_redirected = rr.grab_redirects()
@@ -67,7 +67,7 @@ def write_redirect_pages(app: Sphinx) -> List[Tuple[str, Dict[str, Any], str]]:
 
     # html-collect-pages requires to return iterable of pages to write,
     # we have no additional pages to write
-    return list()
+    return []
 
 
 def env_purge_doc(app: Sphinx, env: BuildEnvironment, docname: str):
@@ -240,6 +240,4 @@ class Reredirects:
                                      self.template_file_option)
             redirect_template = redirect_file_abs.read_text()
 
-        content = Template(redirect_template).substitute({"to_uri": to_uri})
-
-        return content
+        return Template(redirect_template).substitute({"to_uri": to_uri})

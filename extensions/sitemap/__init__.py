@@ -104,11 +104,11 @@ def env_purge_doc(app: Sphinx, env: BuildEnvironment, docname: str):
     :param env: The Sphinx BuildEnvironment
     :param docname: The name of the document to purge
     """
-    logger.debug('env_purge_doc: docname=%s' % docname)
+    logger.debug(f'env_purge_doc: docname={docname}')
     if hasattr(env, 'sitemap_links'):
         sitemap_links: Dict[str, str] = env.sitemap_links
         if sitemap_links.get(docname) is not None:
-            logger.debug('env_purge_doc: sitemap_links contains %s; removing it' % docname)
+            logger.debug(f'env_purge_doc: sitemap_links contains {docname}; removing it')
             env.sitemap_links.pop(docname)
 
 
@@ -124,11 +124,11 @@ def env_merge_info(app: Sphinx, env: BuildEnvironment, docnames: List[str], othe
     """
     # Create a `sitemap_links` attribute in the environment if it doesn't already exist
     if not hasattr(env, 'sitemap_links'):
-        env.sitemap_links = dict()
+        env.sitemap_links = {}
     # Add any links that were present in the reader worker's environment
     if hasattr(other, 'sitemap_links'):
         other_links: Dict[str, str] = other.sitemap_links
-        for linkKey in other_links.keys():
+        for linkKey in other_links:
             env.sitemap_links[linkKey] = other_links[linkKey]
     # Determine if we're using a DirectoryHTMLBuilder or not
     is_dictionary_builder: bool = False
@@ -137,7 +137,7 @@ def env_merge_info(app: Sphinx, env: BuildEnvironment, docnames: List[str], othe
     # Calculate the document link for each docname and add it to the `sitemap_links` attribute in the environment
     for docname in docnames:
         link = calculate_link(is_dictionary_builder, docname)
-        logger.debug('env_merge_info: docname=%s, link=%s' % (docname, link))
+        logger.debug(f'env_merge_info: docname={docname}, link={link}')
         env.sitemap_links[docname] = link
 
 
@@ -153,14 +153,13 @@ def calculate_link(is_dictionary_builder: bool, docname: str) -> str:
     if is_dictionary_builder:
         if docname == "index":
             # root of the entire website, a special case
-            directory_pagename = ""
+            return ""
         elif docname.endswith("/index"):
             # checking until / to avoid false positives like /funds-index
-            directory_pagename = docname[:-6] + "/"
+            return f"{docname[:-6]}/"
         else:
-            directory_pagename = docname + "/"
-        return directory_pagename
-    return docname + ".html"
+            return f"{docname}/"
+    return f"{docname}.html"
 
 
 def get_locales(app: Sphinx) -> List[str]:
@@ -185,7 +184,7 @@ def get_locales(app: Sphinx) -> List[str]:
         ]
 
     # Or autodetect
-    locales: List = list()
+    locales: List = []
     for locale_dir in app.builder.config.locale_dirs:
         locale_dir = os.path.join(app.confdir, locale_dir)
         if os.path.isdir(locale_dir):
@@ -224,9 +223,7 @@ def hreflang_formatter(lang: str) -> str:
     :param lang: The locale string to format
     :return: The formatted locale string
     """
-    if '_' in lang:
-        return lang.replace("_", "-")
-    return lang
+    return lang.replace("_", "-") if '_' in lang else lang
 
 
 def create_sitemap(app: Sphinx) -> List[Tuple[str, Dict[str, Any], str]]:
@@ -238,7 +235,7 @@ def create_sitemap(app: Sphinx) -> List[Tuple[str, Dict[str, Any], str]]:
     :return: An empty list
     """
     # Initialize the empty return list
-    return_list = list()
+    return_list = []
     # Retrieve the `site_url` config property
     site_url = app.builder.config.site_url or app.builder.config.html_baseurl
     if not site_url:
@@ -250,11 +247,14 @@ def create_sitemap(app: Sphinx) -> List[Tuple[str, Dict[str, Any], str]]:
     if app.env is None:
         logger.error("sphinx-sitemap: environment is None; this is unexpected")
         return return_list
-    sitemap_links: Dict[str, str] = dict()
+    sitemap_links: Dict[str, str] = {}
     if hasattr(app.env, 'sitemap_links'):
         sitemap_links = app.env.sitemap_links
     if len(sitemap_links) == 0:
-        logger.warning("sphinx-sitemap: No pages generated for %s" % app.config.sitemap_filename)
+        logger.warning(
+            f"sphinx-sitemap: No pages generated for {app.config.sitemap_filename}"
+        )
+
         return return_list
     # Create a new XML root element
     ElementTree.register_namespace('xhtml', "http://www.w3.org/1999/xhtml")
@@ -263,16 +263,13 @@ def create_sitemap(app: Sphinx) -> List[Tuple[str, Dict[str, Any], str]]:
     locales = get_locales(app)
     # Retrieve the `version` config property
     if app.builder.config.version:
-        version = app.builder.config.version + '/'
+        version = f'{app.builder.config.version}/'
     else:
         version = ""
     # Retrieve the `sitemap_url_scheme` config property
     scheme = app.config.sitemap_url_scheme
     # Retrieve the `language` config property
-    if app.builder.config.language:
-        lang = app.builder.config.language + '/'
-    else:
-        lang = ""
+    lang = f'{app.builder.config.language}/' if app.builder.config.language else ""
     # Add each document link as a child of the root XML element
     for linkKey in sitemap_links.keys():
         # Retrieve the linked document filename including extension
@@ -284,7 +281,7 @@ def create_sitemap(app: Sphinx) -> List[Tuple[str, Dict[str, Any], str]]:
         )
         # Add a sub-element for each locale
         for lang in locales:
-            lang = lang + '/'
+            lang = f'{lang}/'
             ElementTree.SubElement(
                 url, "{http://www.w3.org/1999/xhtml}link",
                 rel="alternate",
@@ -294,12 +291,12 @@ def create_sitemap(app: Sphinx) -> List[Tuple[str, Dict[str, Any], str]]:
                 )
             )
     # Determine the output filename of the sitemap and write the XML document to it
-    filename = app.outdir + "/" + app.config.sitemap_filename
+    filename = f"{app.outdir}/{app.config.sitemap_filename}"
     logger.info(bold('writing sitemap... '), nonl=True)
     ElementTree.ElementTree(root).write(filename,
                                         xml_declaration=True,
                                         encoding='utf-8',
                                         method="xml")
-    logger.info("done; generated sitemap in %s" % filename)
+    logger.info(f"done; generated sitemap in {filename}")
     # Return the empty list
     return return_list
